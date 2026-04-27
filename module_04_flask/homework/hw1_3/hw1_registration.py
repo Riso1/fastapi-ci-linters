@@ -12,18 +12,35 @@
 from flask import Flask
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, StringField
-from hw2_validators import number_length, NumberLength
+from wtforms.validators import DataRequired, Email, InputRequired, NumberRange, Optional, ValidationError
+
 
 app = Flask(__name__)
 
+def phone_length(min_len: int, max_len: int, message: str = None):
+    def _phone_length(form, field):
+        value = field.data.strip()
+
+        if not value.isdigit():
+            raise ValidationError("Телефон должен содержать только цифры!")
+        if len(value) < min_len or len(value) > max_len:
+            raise ValidationError(
+                message or f"Телефон должен содержать от {min_len} до {max_len} цифр."
+            )
+
+    return _phone_length
 
 class RegistrationForm(FlaskForm):
-    email = StringField()
-    phone = IntegerField()
-    name = StringField()
-    address = StringField()
-    index = IntegerField()
-    comment = StringField()
+    email = StringField(validators=[DataRequired(message="Введите email!"),
+                                    Email(message="Некорректный email")])
+    phone = StringField(validators=[
+        DataRequired(message="Введите телефон!"),
+        phone_length(10, 10, message="Телефон должен содержать 10 цифр!")
+    ])
+    name = StringField(validators=[DataRequired(message="Введите имя!")])
+    address = StringField(validators=[DataRequired(message="Введите адрес!")])
+    index = IntegerField(validators=[InputRequired(message="Введите индекс!")])
+    comment = StringField(validators=[Optional()])
 
 
 @app.route("/registration", methods=["POST"])
