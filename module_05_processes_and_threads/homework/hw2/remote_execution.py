@@ -28,7 +28,7 @@ class CodeForm(FlaskForm):
 
 def run_python_code_in_subproccess(code: str, timeout: int):
     process = subprocess.Popen(
-        [sys.executable, "-c", code],
+        ["prlimit", "--nproc=1:1", sys.executable, "-c", code],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
