@@ -14,6 +14,10 @@ from typing import List
 
 from flask import Flask
 
+import os
+import signal
+import subprocess
+
 app = Flask(__name__)
 
 
@@ -24,10 +28,26 @@ def get_pids(port: int) -> List[int]:
     @return: список PID процессов, занимающих порт
     """
     if not isinstance(port, int):
-        raise ValueError
+        raise ValueError("Порт должен быть целым числом")
 
-    pids: List[int] = []
-    ...
+    try:
+        result = subprocess.run(
+            ["lsof", "-t", f"-i:{port}"],
+            capture_output=True,
+            text=True
+        )
+
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            "Выполнение невозможно"
+        ) from error
+
+    stdout = result.stdout.strip()
+
+    if not stdout:
+        return []
+
+    pids: List[int] = [int(pid) for pid in stdout.splitlines()]
     return pids
 
 
@@ -37,7 +57,9 @@ def free_port(port: int) -> None:
     @param port: порт
     """
     pids: List[int] = get_pids(port)
-    ...
+
+    for pid in pids:
+        os.kill(pid, signal.SIGTERM)
 
 
 def run(port: int) -> None:
