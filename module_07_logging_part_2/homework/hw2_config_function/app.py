@@ -1,27 +1,28 @@
-from module_07_logging_part_2.homework.hw3_level_file_handler.logger_helper import get_logger
+import logging
+import sys
 from utils import string_to_operator
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
-# def configure_logging() -> None:
-#     """
-#     Конфигурирует логирование приложения.
-#     Логи выводятся в stdout.
-#     Формат:
-#     уровень | логгер | время | номер строки | сообщение
-#     """
-#     stream_handler = logging.StreamHandler(sys.stdout)
-#
-#     formatter = logging.Formatter(
-#         fmt="%(levelname)s | %(name)s | %(asctime)s | %(lineno)d | %(message)s"
-#     )
-#     stream_handler.setFormatter(formatter)
-#
-#     logging.basicConfig(
-#         level=logging.INFO,
-#         handlers=[stream_handler]
-#     )
+def configure_logging() -> None:
+    """
+    Конфигурирует логирование приложения.
+    Логи выводятся в stdout.
+    Формат:
+    уровень | логгер | время | номер строки | сообщение
+    """
+    stream_handler = logging.StreamHandler(sys.stdout)
+
+    formatter = logging.Formatter(
+        fmt="%(levelname)s | %(name)s | %(asctime)s | %(lineno)d | %(message)s"
+    )
+    stream_handler.setFormatter(formatter)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[stream_handler]
+    )
 
 
 def calc(args):

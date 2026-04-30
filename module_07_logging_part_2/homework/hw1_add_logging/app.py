@@ -1,8 +1,8 @@
 
-from module_07_logging_part_2.homework.hw3_level_file_handler.logger_helper import get_logger
+import logging
 from utils import string_to_operator
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 def calc(args):
     logger.info("Arguments: %s", args)
