@@ -1,8 +1,15 @@
-
 import logging
+import logging.config
+
+from dict_config import dict_config
 from utils import string_to_operator
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("app")
+
+
+def configure_logging() -> None:
+    logging.config.dictConfig(dict_config)
+
 
 def calc(args):
     logger.info("Arguments: %s", args)
@@ -13,26 +20,23 @@ def calc(args):
 
     try:
         num_1 = float(num_1)
-    except ValueError as e:
-        logger.error("Error while converting number 1")
-        logger.exception(e)
+    except ValueError:
+        logger.exception("Error while converting number 1")
         return
 
     try:
         num_2 = float(num_2)
-    except ValueError as e:
-        logger.error("Error while converting number 2")
-        logger.exception(e)
+    except ValueError:
+        logger.exception("Error while converting number 2")
         return
 
     operator_func = string_to_operator(operator)
-
     result = operator_func(num_1, num_2)
 
     logger.info("Result: %s", result)
     logger.info("%s %s %s = %s", num_1, operator, num_2, result)
 
 
-if __name__ == '__main__':
-    # calc(sys.argv[1:])
+if __name__ == "__main__":
+    configure_logging()
     calc(["2", "+", "3"])
