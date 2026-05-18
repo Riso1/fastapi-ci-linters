@@ -16,9 +16,9 @@ class Worker(Thread):
 
             current_timestamp = int(time.time())
             date_string = get_date_from_server(current_timestamp)
-            if date_string is not None:
-                log_line = f"{current_timestamp} {date_string}"
-                self.queue.put((current_timestamp, log_line))
+
+            log_line = f"{current_timestamp} {date_string}"
+            self.queue.put((current_timestamp, log_line))
 
             elapsed = time.time() - iteration_start
             time.sleep(max(0, 1 - elapsed))
@@ -34,19 +34,21 @@ class Writer(Thread):
             while True:
                 item = self.queue.get()
                 timestamp, log_line = item
-                if log_line is not None:
-                    file.write(log_line + "\n")
-                    file.flush()
-                else:
+                if log_line is None:
                     break
+                file.write(log_line + "\n")
+                file.flush()
 
 
 def get_date_from_server(timestamp):
     url = f"http://127.0.0.1:8080/timestamp/{timestamp}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.text
-    return None
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return response.text
+        return f"HTTP_ERROR_{response.status_code}"
+    except requests.RequestException:
+        return "Server unavailable"
 
 if __name__ == "__main__":
     queue = PriorityQueue()
