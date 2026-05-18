@@ -12,12 +12,16 @@ class Worker(Thread):
     def run(self):
         start_time = time.time()
         while time.time() - start_time < 20:
+            iteration_start = time.time()
+
             current_timestamp = int(time.time())
             date_string = get_date_from_server(current_timestamp)
             if date_string is not None:
                 log_line = f"{current_timestamp} {date_string}"
                 self.queue.put((current_timestamp, log_line))
-            time.sleep(1)
+
+            elapsed = time.time() - iteration_start
+            time.sleep(max(0, 1 - elapsed))
 
 class Writer(Thread):
     def __init__(self, queue, filename):
