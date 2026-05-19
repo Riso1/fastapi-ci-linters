@@ -1,12 +1,10 @@
-from threading import Semaphore, Thread, Event
+from threading import Semaphore, Thread
 import time
 
 sem: Semaphore = Semaphore()
-stop_event = Event()
-
 
 def fun1():
-    while not stop_event.is_set():
+    while True:
         sem.acquire()
         print(1)
         sem.release()
@@ -14,7 +12,7 @@ def fun1():
 
 
 def fun2():
-    while not stop_event.is_set():
+    while True:
         sem.acquire()
         print(2)
         sem.release()
@@ -28,12 +26,9 @@ t1.start()
 t2.start()
 
 try:
-    while t1.is_alive() or t2.is_alive():
+    while True:
         time.sleep(0.1)
 
 except KeyboardInterrupt:
-    print('\nReceived keyboard interrupt, quitting threads.')
-    stop_event.set()
+    print('\nReceived keyboard interrupt.')
 
-    t1.join()
-    t2.join()

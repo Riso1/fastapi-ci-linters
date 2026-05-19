@@ -30,14 +30,33 @@ class Writer(Thread):
         self.filename = filename
 
     def run(self):
+        buffer = {}
+
         with open(self.filename, "a", encoding="utf-8") as file:
             while True:
                 item = self.queue.get()
                 timestamp, log_line = item
+
                 if log_line is None:
+                    for ts in sorted(buffer):
+                        for line in buffer[ts]:
+                            file.write(line + "\n")
+                    file.flush()
                     break
-                file.write(log_line + "\n")
-                file.flush()
+
+                if timestamp not in buffer:
+                    buffer[timestamp] = []
+
+                buffer[timestamp].append(log_line)
+
+                safe_timestamp = int(time.time()) - 5
+                ready_timestamp = sorted(ts for ts in buffer if ts <= safe_timestamp)
+
+                for ts in ready_timestamp:
+                    for line in buffer[ts]:
+                        file.write(line + "\n")
+                    file.flush()
+                    del buffer[ts]
 
 
 def get_date_from_server(timestamp):
