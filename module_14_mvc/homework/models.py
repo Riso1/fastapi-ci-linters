@@ -10,10 +10,11 @@ DATA: List[dict] = [
 
 class Book:
 
-    def __init__(self, id: int, title: str, author: str) -> None:
+    def __init__(self, id: int, title: str, author: str, views: int) -> None:
         self.id: int = id
         self.title: str = title
         self.author: str = author
+        self.views = views
 
     def __getitem__(self, item: str) -> Any:
         return getattr(self, item)
@@ -36,7 +37,8 @@ def init_db(initial_records: List[dict]) -> None:
                 CREATE TABLE `table_books` (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, 
                     title TEXT, 
-                    author TEXT
+                    author TEXT,
+                    views INTEGER DEFAULT 0
                 )
                 """
             )
@@ -61,3 +63,53 @@ def get_all_books() -> List[Book]:
             """
         )
         return [Book(*row) for row in cursor.fetchall()]
+
+def add_book(title: str, author: str) -> None:
+    with sqlite3.connect("table_books.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """ 
+            INSERT INTO table_books (title, author) 
+            VALUES (?, ?)
+            """,
+            (title, author)
+        )
+
+def get_books_by_author(author: str) -> List[Book]:
+    with sqlite3.connect("table_books.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT * FROM table_books 
+            WHERE author = ?
+            """,
+            (author,)
+        )
+        return [Book(*row) for row in cursor.fetchall()]
+
+def get_book_by_id(book_id: int) -> Optional[Book]:
+    with sqlite3.connect("table_books.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT * FROM table_books
+                WHERE id = ?
+            """,
+            (book_id,)
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return Book(*row)
+
+def increment_book_views(book_id: int) -> None:
+    with sqlite3.connect("table_books.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE table_books
+            SET views = views + 1
+            WHERE id = ?
+            """,
+            (book_id,)
+        )
