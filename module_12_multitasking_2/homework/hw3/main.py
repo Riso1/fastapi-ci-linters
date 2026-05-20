@@ -3,7 +3,6 @@ import time
 
 sem: Semaphore = Semaphore()
 
-
 def fun1():
     while True:
         sem.acquire()
@@ -22,9 +21,17 @@ def fun2():
 
 t1: Thread = Thread(target=fun1)
 t2: Thread = Thread(target=fun2)
+
+t1.daemon = True
+t2.daemon = True
+
+t1.start()
+t2.start()
+
 try:
-    t1.start()
-    t2.start()
+    while True:
+        time.sleep(0.1)
+
 except KeyboardInterrupt:
-    print('\nReceived keyboard interrupt, quitting threads.')
-    exit(1)
+    print('\nReceived keyboard interrupt.')
+
