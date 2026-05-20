@@ -22,6 +22,9 @@ def fun2():
 t1: Thread = Thread(target=fun1)
 t2: Thread = Thread(target=fun2)
 
+t1.daemon = True
+t2.daemon = True
+
 t1.start()
 t2.start()
 
