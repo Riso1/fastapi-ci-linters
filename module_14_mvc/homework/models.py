@@ -113,3 +113,14 @@ def increment_book_views(book_id: int) -> None:
             """,
             (book_id,)
         )
+
+def increment_all_books_views() -> None:
+    with sqlite3.connect("table_books.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE table_books
+            SET views = views + 1
+            """
+        )
+        

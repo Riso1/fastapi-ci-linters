@@ -7,12 +7,12 @@
         {{ form.hidden_tag() }}
         <div class="section"><span>1</span>Book title</div>
         <div class="inner-wrap">
-            <label>Book title {{ form.book_title() }}</label>
+            <label>Book title {{ form.book_title(required=True) }}</label>
         </div>
 
         <div class="section"><span>2</span>Author full name</div>
         <div class="inner-wrap">
-            <label>Author full name {{ form.author_name() }}</label>
+            <label>Author full name {{ form.author_name(required=True) }}</label>
         </div>
 
         <div class="button-section">

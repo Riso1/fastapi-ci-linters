@@ -1,7 +1,16 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, redirect, url_for
 from typing import List
 
-from models import init_db, get_all_books, DATA, add_book, get_books_by_author, get_book_by_id, increment_book_views
+from models import (
+    init_db,
+    get_all_books,
+    DATA,
+    add_book,
+    get_books_by_author,
+    get_book_by_id,
+    increment_book_views,
+    increment_all_books_views,
+)
 from forms import BookForm
 
 app: Flask = Flask(__name__)
@@ -32,9 +41,7 @@ def _get_html_table_for_books(books: List[dict]) -> str:
 
 @app.route('/books')
 def all_books() -> str:
-    books = get_all_books()
-    for book in books:
-        increment_book_views(book.id)
+    increment_all_books_views()
 
     books = get_all_books()
 
@@ -62,13 +69,6 @@ def get_book(book_id: int):
 
 @app.route('/books/form', methods=["GET", "POST"])
 def get_books_form() -> str:
-    # if request.method == "POST":
-    #     title = request.form["book_title"]
-    #     author = request.form["author_name"]
-    #     add_book(title, author)
-    #     return redirect(url_for("all_books"))
-    #
-    # return render_template('add_book.html')
     form = BookForm()
 
     if form.validate_on_submit():
