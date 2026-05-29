@@ -7,13 +7,17 @@ FROM (
     SELECT
         s.group_id,
         s.student_id,
-        COUNT(*) AS overdue_count
+        COUNT(
+            CASE
+                WHEN ag.date > a.due_date THEN 1
+            END
+        ) AS overdue_count
     FROM students s
-    JOIN assignments_grades ag
+    LEFT JOIN assignments_grades ag
         ON s.student_id = ag.student_id
-    JOIN assignments a
+    LEFT JOIN assignments a
         ON ag.assisgnment_id = a.assisgnment_id
-    WHERE ag.date > a.due_date
     GROUP BY s.group_id, s.student_id
 ) AS overdue_stats
-GROUP BY overdue_stats.group_id;
+GROUP BY overdue_stats.group_id
+ORDER BY overdue_stats.group_id;
