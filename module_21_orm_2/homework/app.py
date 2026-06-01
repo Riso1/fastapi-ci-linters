@@ -5,7 +5,7 @@ from io import TextIOWrapper
 from flask import Flask, jsonify, request
 from sqlalchemy import func, extract
 from database import Base, SessionLocal, engine
-from models import Book, Student, ReceivingBook, Author
+from models import Book, Student, ReceivingBook
 
 app = Flask(__name__)
 
@@ -17,19 +17,6 @@ def get_books():
     with SessionLocal() as session:
         books = session.query(Book).all()
         return jsonify([book.to_dict() for book in books]), 200
-
-
-@app.route("/debtors", methods=["GET"])
-def get_debtors():
-    with SessionLocal() as session:
-        debtors = (
-            session.query(ReceivingBook)
-            .filter(ReceivingBook.date_of_return.is_(None))
-            .all()
-        )
-
-        result = [item.to_dict() for item in debtors if item.count_date_with_book > 14]
-        return jsonify(result), 200
 
 
 @app.route("/receive-book", methods=["POST"])
@@ -106,13 +93,8 @@ def search_books():
     query = request.args.get("q", "").strip()
 
     with SessionLocal() as session:
-        books = session.query(Book).all()
-        result = [
-            book.to_dict()
-            for book in books
-            if query.lower() in book.name.lower()
-        ]
-        return jsonify(result), 200
+        books = session.query(Book).filter(Book.name.like(f"%{query}%")).all()
+        return jsonify([book.to_dict() for book in books]), 200
 
 @app.route("/authors/<int:author_id>/books/count", methods=["GET"])
 def get_books_count_by_author(author_id: int):
@@ -226,24 +208,66 @@ def upload_students_csv():
 
     file = request.files["file"]
 
-    with SessionLocal() as session:
-        reader = csv.DictReader(TextIOWrapper(file.stream, encoding="utf-8"), delimiter=";")
+    try:
+        reader = csv.DictReader(
+            TextIOWrapper(file.stream, encoding="utf-8"),
+            delimiter=";"
+        )
+
         students_data = []
+        required_fields = {
+            "name",
+            "surname",
+            "phone",
+            "email",
+            "average_score",
+            "scholarship",
+        }
 
-        for row in reader:
-            students_data.append({
-                "name": row["name"],
-                "surname": row["surname"],
-                "phone": row["phone"],
-                "email": row["email"],
-                "average_score": float(row["average_score"]),
-                "scholarship": row["scholarship"].lower() in ("true", "1", "yes", "да"),
-            })
+        if reader.fieldnames is None:
+            return jsonify({"error": "CSV file is empty"}), 400
 
-        session.bulk_insert_mappings(Student, students_data)
-        session.commit()
+        missing_fields = required_fields - set(reader.fieldnames)
+        if missing_fields:
+            return jsonify({
+                "error": f"Missing columns: {', '.join(sorted(missing_fields))}"
+            }), 400
 
-    return jsonify({"inserted": len(students_data)}), 201
+        for index, row in enumerate(reader, start=1):
+            try:
+                students_data.append({
+                    "name": row["name"],
+                    "surname": row["surname"],
+                    "phone": row["phone"],
+                    "email": row["email"],
+                    "average_score": float(row["average_score"]),
+                    "scholarship": row["scholarship"].lower() in ("true", "1", "yes", "да"),
+                })
+            except ValueError:
+                return jsonify({
+                    "error": f"Invalid average_score in row {index}"
+                }), 400
+
+        with SessionLocal() as session:
+            session.bulk_insert_mappings(Student, students_data)
+            session.commit()
+
+        return jsonify({"inserted": len(students_data)}), 201
+
+    except Exception as exc:
+        return jsonify({"error": f"CSV processing error: {str(exc)}"}), 400
+
+@app.route("/debtors", methods=["GET"])
+def get_debtors():
+    with SessionLocal() as session:
+        debtors = (
+            session.query(ReceivingBook)
+            .filter(ReceivingBook.date_of_return.is_(None))
+            .filter(ReceivingBook.count_date_with_book > 14)
+            .all()
+        )
+
+        return jsonify([item.to_dict() for item in debtors]), 200
 
 if __name__ == "__main__":
     app.run(debug=True)

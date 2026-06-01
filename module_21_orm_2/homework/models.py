@@ -4,6 +4,7 @@ from sqlalchemy import Integer, String, Float, Boolean, Date, DateTime, ForeignK
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy import func
 
 from database import Base
 
@@ -127,6 +128,10 @@ class ReceivingBook(Base):
     def count_date_with_book(self) -> int:
         end_date = self.date_of_return or datetime.now()
         return (end_date - self.date_of_issue).days
+
+    @count_date_with_book.expression
+    def count_date_with_book(cls):
+        return func.julianday(func.coalesce(cls.date_of_return, func.current_timestamp())) - func.julianday(cls.date_of_issue)
 
     def to_dict(self) -> dict:
         return {
