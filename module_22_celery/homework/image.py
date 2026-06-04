@@ -2,10 +2,10 @@
 Здесь происходит логика обработки изображения
 """
 
+import os
 from typing import Optional
 
 from PIL import Image, ImageFilter
-
 from celery import shared_task
 
 from mail import send_email_task
@@ -17,7 +17,7 @@ def blur_image(src_filename: str, dst_filename: Optional[str] = None):
     Применяет размытие по Гауссу со значением 5.
     """
     if not dst_filename:
-        dst_filename = f'blur_{src_filename}'
+        dst_filename = f"blur_{src_filename}"
 
     with Image.open(src_filename) as img:
         img.load()
@@ -29,8 +29,13 @@ def blur_image(src_filename: str, dst_filename: Optional[str] = None):
 def process_image(src_filename: str, dst_filename: str, order_id: str, receiver: str):
     """
     Задача для celery.
-    Размывает изображение и потом отправляет его на почту.
+    Размывает изображение, отправляет его на почту
+    и потом удаляет временные файлы.
     """
-    blur_image(src_filename, dst_filename)
-    send_email_task.delay(order_id, receiver, dst_filename)
-    return dst_filename
+    try:
+        blur_image(src_filename, dst_filename)
+        send_email_task.delay(order_id, receiver, dst_filename)
+        return dst_filename
+    finally:
+        if os.path.exists(src_filename):
+            os.remove(src_filename)

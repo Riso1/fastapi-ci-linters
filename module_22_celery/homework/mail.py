@@ -84,8 +84,13 @@ def unsubscribe_email(email: str):
 def send_email_task(order_id: str, receiver: str, filename: str):
     """
     Обертка над отправкой письма для celery.
+    После отправки удаляется обработанный файл.
     """
-    send_email(order_id, receiver, filename)
+    try:
+        send_email(order_id, receiver, filename)
+    finally:
+        if os.path.exists(filename):
+            os.remove(filename)
 
 
 @shared_task(name="mail.send_weekly_mailing")
@@ -103,14 +108,19 @@ def send_weekly_mailing():
         server.starttls()
         server.login(SMTP_USER, SMTP_PASSWORD)
 
-        for receiver in subscribers:
-            email = MIMEMultipart()
-            email["Subject"] = "Новости сервиса обработки изображений"
-            email["From"] = SMTP_USER
-            email["To"] = receiver
-            email.attach(MIMEText("Спасибо, что пользуетесь сервисом обработки изображений!", "plain", "utf-8"))
+        email = MIMEMultipart()
+        email["Subject"] = "Новости сервиса обработки изображений"
+        email["From"] = SMTP_USER
+        email["To"] = ", ".join(sorted(subscribers))
+        email.attach(
+            MIMEText(
+                "Спасибо, что пользуетесь сервисом обработки изображений!",
+                "plain",
+                "utf-8",
+            )
+        )
 
-            text = email.as_string()
-            server.sendmail(SMTP_USER, receiver, text)
+        text = email.as_string()
+        server.sendmail(SMTP_USER, list(subscribers), text)
 
     return f"Отправлено писем: {len(subscribers)}"
