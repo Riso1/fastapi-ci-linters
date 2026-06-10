@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import Base, engine, get_session
@@ -28,12 +28,23 @@ app = FastAPI(
     "/recipes",
     response_model=list[RecipeList],
     summary="Получить список рецептов",
-    description="Возвращает все рецепты, отсортированные по популярности."
+    description=(
+        "Возвращает список рецептов с пагинацией. "
+        "Время приготовления указано в минутах. "
+        "Рецепты сортируются по количеству просмотров по убыванию. "
+        "Если просмотры совпадают, сначала показываются рецепты с меньшим временем приготовления."
+    ),
 )
-async def get_recipes(session: AsyncSession = Depends(get_session)):
-    query = select(Recipe).order_by(
-        Recipe.views.desc(),
-        Recipe.cooking_time.asc(),
+async def get_recipes(
+    skip: int = 0,
+    limit: int = 10,
+    session: AsyncSession = Depends(get_session),
+):
+    query = (
+        select(Recipe)
+        .order_by(Recipe.views.desc(), Recipe.cooking_time.asc())
+        .offset(skip)
+        .limit(limit)
     )
     result = await session.execute(query)
     return result.scalars().all()
@@ -42,8 +53,12 @@ async def get_recipes(session: AsyncSession = Depends(get_session)):
 @app.get(
     "/recipes/{recipe_id}",
     response_model=RecipeDetail,
-    summary="Получить рецепт",
-    description="Возвращает полную информацию о рецепте и увеличивает счётчик просмотров."
+    summary="Получить детальную информацию о рецепте",
+    description=(
+        "Возвращает полную информацию о рецепте. "
+        "Время приготовления указано в минутах. "
+        "При открытии рецепта счётчик просмотров увеличивается атомарно."
+    ),
 )
 async def get_recipe(recipe_id: int, session: AsyncSession = Depends(get_session)):
     recipe = await session.get(Recipe, recipe_id)
@@ -51,15 +66,21 @@ async def get_recipe(recipe_id: int, session: AsyncSession = Depends(get_session
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    recipe.views += 1
+    await session.execute(
+        update(Recipe)
+        .where(Recipe.id == recipe_id)
+        .values(views=Recipe.views + 1)
+    )
     await session.commit()
-    await session.refresh(recipe)
+
+    recipe.views += 1
+    ingredients = recipe.ingredients.split("\n") if recipe.ingredients else []
 
     return RecipeDetail(
         id=recipe.id,
         title=recipe.title,
         cooking_time=recipe.cooking_time,
-        ingredients=recipe.ingredients.split("\n"),
+        ingredients=ingredients,
         description=recipe.description,
         views=recipe.views,
     )
@@ -70,7 +91,10 @@ async def get_recipe(recipe_id: int, session: AsyncSession = Depends(get_session
     response_model=RecipeDetail,
     status_code=201,
     summary="Создать рецепт",
-    description="Создаёт новый рецепт."
+    description=(
+        "Создаёт новый рецепт. "
+        "Время приготовления передаётся в минутах."
+    ),
 )
 async def create_recipe(
     recipe_data: RecipeCreate,
@@ -86,13 +110,14 @@ async def create_recipe(
 
     session.add(recipe)
     await session.commit()
-    await session.refresh(recipe)
+
+    ingredients = recipe.ingredients.split("\n") if recipe.ingredients else []
 
     return RecipeDetail(
         id=recipe.id,
         title=recipe.title,
         cooking_time=recipe.cooking_time,
-        ingredients=recipe.ingredients.split("\n"),
+        ingredients=ingredients,
         description=recipe.description,
         views=recipe.views,
     )
