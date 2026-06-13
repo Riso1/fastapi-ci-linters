@@ -44,34 +44,49 @@ def seed_data():
     if User.query.first():
         return
 
-    coffee_response = requests.get(
-        "https://dummyjson.com/products/search?q=coffee",
-        timeout=10,
-    )
-    coffee_data = coffee_response.json()["products"][0]
+    try:
+        coffee_response = requests.get(
+            "https://dummyjson.com/products/search?q=coffee",
+            timeout=10,
+        )
+        coffee_response.raise_for_status()
+        coffee_products = coffee_response.json().get("products", [])
+
+        if not coffee_products:
+            return
+
+        users_response = requests.get(
+            "https://dummyjson.com/users?limit=10",
+            timeout=10,
+        )
+        users_response.raise_for_status()
+        users_data = users_response.json().get("users", [])
+
+    except requests.RequestException:
+        return
+
+    coffee_data = coffee_products[0]
 
     coffee = Coffee(
-        title=coffee_data["title"],
-        category=coffee_data["category"],
-        description=coffee_data["description"],
-        reviews=[review["comment"] for review in coffee_data.get("reviews", [])],
+        title=coffee_data.get("title"),
+        category=coffee_data.get("category"),
+        description=coffee_data.get("description"),
+        reviews=[
+            review.get("comment")
+            for review in coffee_data.get("reviews", [])
+            if review.get("comment")
+        ],
     )
 
     db.session.add(coffee)
     db.session.commit()
 
-    users_response = requests.get(
-        "https://dummyjson.com/users?limit=10",
-        timeout=10,
-    )
-    users_data = users_response.json()["users"]
-
     for item in users_data:
         user = User(
-            name=item["firstName"],
-            surname=item["lastName"],
+            name=item.get("firstName", "Unknown"),
+            surname=item.get("lastName"),
             patronomic=None,
-            address=item["address"],
+            address=item.get("address", {}),
             coffee_id=coffee.id,
         )
         db.session.add(user)
