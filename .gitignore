@@ -139,5 +139,3 @@ dmypy.json
 .swp
 
 prettifier.py
-
-*.db
