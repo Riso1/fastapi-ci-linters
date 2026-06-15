@@ -49,11 +49,18 @@ def create_parking():
     if not data.get('address'):
         return jsonify({'error': 'address is required'}), 400
 
-    count_places = data.get('count_places')
-    if count_places is None or int(count_places) < 0:
+    try:
+        count_places = int(data.get('count_places'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'count_places must be integer'}), 400
+
+    if count_places < 0:
         return jsonify({'error': 'count_places must be positive'}), 400
 
-    count_available_places = data.get('count_available_places', count_places)
+    try:
+        count_available_places = int(data.get('count_available_places', count_places))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'count_available_places must be integer'}), 400
 
     parking = Parking(
         address=data['address'],
