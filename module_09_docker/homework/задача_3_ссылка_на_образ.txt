@@ -1,1 +1,0 @@
-https://hub.docker.com/r/m0r64n4name/new_year_app
